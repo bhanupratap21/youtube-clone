@@ -9,18 +9,21 @@ cloudinary.config({
 
 const uploadOnCloudinary = async (localFilePath) => {
   try {
-    if (!localFilePath) {
-      return null;
-    }
+    if (!localFilePath) return null;
+    
     const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "auto",
+      folder: "youtube-clone",
     });
-    console.log("file is uploaded on cloudinary successfully.", response);
+
+    // file has been uploaded successfull
+    //console.log("file is uploaded on cloudinary ", response.url);
+
+    fs.unlinkSync(localFilePath);
     return response;
   } catch (error) {
-    //remove the locally saved temporary file as
-    //the upload operation got failed
-    fs.unlinkSync(localFilePath);
+    console.error("Cloudinary Upload Error:", error);
+    fs.unlinkSync(localFilePath); // remove the locally saved temporary file as the upload operation got failed
     return null;
   }
 };
