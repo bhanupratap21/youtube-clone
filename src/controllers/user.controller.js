@@ -176,7 +176,7 @@ const logoutUser = asyncHandlers(async (req, res) => {
     .json(new ApiResponse(200, {}, "User logged Out"));
 });
 
-const refreshAccessToken = asyncHandlers(async (req, res) => {
+const refreshAccessToken = asyncndlers(async (req, res) => {
   const incomingRefreshToken =
     req.cookies.refreshToken || req.body.refreshToken;
 
@@ -277,6 +277,68 @@ const updateAccountDetails = asyncHandlers(async (req, res) => {
     .json(new ApiResponse(200, user, "Account details updated successfully."));
 });
 
+const updateUserAvatar = asyncHandlers(async (req, res) => {
+  const avatarLocalPath = req.file?.path;
+
+  if (!avatarLocalPath) {
+    throw new ApiError(400, "Avatar file is missing");
+  }
+
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+  if (!avatar.url) {
+    throw new ApiError(400, "Error while uploading on avatar.");
+  }
+
+ const user = await User.findByIdAndDelete(
+    req.user?._id,
+    {
+      $set: {
+        avatar: avatar.url,
+      },
+    },
+    { new: true }
+  ).select("-password");
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(200,user,"Avatar Image Updated Successfully.")
+  )
+
+});
+
+const updateUserCoverImage = asyncHandlers(async (req, res) => {
+  const coverImageLocalPath = req.file?.path;
+
+  if (!coverImageLocalPath) {
+    throw new ApiError(400, "Cover File file is missing");
+  }
+
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+
+  if (!coverImage.url) {
+    throw new ApiError(400, "Error while uploading on coverImage.");
+  }
+
+ const user =  await User.findByIdAndDelete(
+    req.user?._id,
+    {
+      $set: {
+        coverImage: coverImage.url,
+      },
+    },
+    { new: true }
+  ).select("-password");
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(200,user,"Cover Image updated Successfully")
+  )
+
+});
+
 export {
   registerUser,
   loginUser,
@@ -285,4 +347,6 @@ export {
   changeCurrentPassword,
   getCurrentUser,
   updateAccountDetails,
+  updateUserAvatar,
+  updateUserCoverImage,
 };
