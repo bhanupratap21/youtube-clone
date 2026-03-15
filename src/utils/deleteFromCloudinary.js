@@ -1,3 +1,5 @@
+import { v2 as cloudinary } from "cloudinary";
+
 const deleteFromCloudinary = async (filePublic_id, resourceType) => {
   try {
     if (!filePublic_id) return null;

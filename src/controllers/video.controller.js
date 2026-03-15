@@ -96,12 +96,8 @@ const publishVideo = asyncHandlers(async (req, res) => {
     throw new ApiResponse(400, "Please login and try again");
   }
 
-  if (
-    [title, description].some((field) => {
-      field.trim() === "";
-    })
-  ) {
-    throw new ApiResponse(400, "video file is required.");
+  if (!title?.trim() || !description?.trim()) {
+    throw new ApiError(400, "All fields are required.");
   }
 
   const videoFileLocalPath = req.files?.videoFile?.[0]?.path;
@@ -145,7 +141,6 @@ const publishVideo = asyncHandlers(async (req, res) => {
       .json(new ApiResponse(201, uploadVideo, "Successfully uploaded video"));
   } catch (error) {
     if (videoFile?.public_id) {
-      //checks if the url is in the cloudinary in the first place,
       await deleteFromCloudinary(videoFile.public_id, "video");
     }
     if (thumbnailFile?.public_id) {
