@@ -170,7 +170,34 @@ const updateComment = asyncHandlers(async (req, res) => {
 });
 
 const deleteComment = asyncHandlers(async (req, res) => {
-  
+  const { commentId } = req.params;
+
+  if (!mongoose.isValidObjectId(commentId) || !commentId) {
+    throw new ApiError(400, "Invalid comment id");
+  }
+  const comment = await Comment.findById(commentId);
+
+  if(!comment){
+    throw new ApiError(400,"comment not found");
+  }
+
+   if (comment?.owner.toString() !== req.user?._id.toString()) {
+     throw new ApiError(403, "You are not authorized to delete this comment");
+   }
+
+   const deletedComment = await Comment.findOneAndDelete({
+     _id: commentId,
+     owner: req.user?._id,
+   });
+
+   if (!deletedComment) {
+     throw new ApiError(500, "Error while deleting comment, Please try again");
+   }
+
+   return res
+     .status(200)
+     .json(new ApiResponse(200, null, "Comment deleted successfully"));
+
 });
 
 export { getVideoComments, addComment, updateComment, deleteComment };

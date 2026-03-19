@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
-import { getVideoComments, addComment, updateComment } from '../controllers/comments.controller.js';
+import {
+  getVideoComments,
+  addComment,
+  updateComment,
+  deleteComment,
+} from "../controllers/comments.controller.js";
 import { checkValidObjectId } from '../middlewares/validateObjectId.middleware.js';
 
 const router = Router();
@@ -13,8 +18,7 @@ router.route("/:videoId")
 
 router
   .route("/:videoId/:commentId")
-  //   .delete(checkValidObjectId(["commentId"]), deleteComment)
+  .delete(checkValidObjectId(["commentId"]), deleteComment)
   .patch(checkValidObjectId(["videoId","commentId"]), updateComment);
-                        
 
 export default router;
