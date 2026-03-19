@@ -34,7 +34,7 @@ const getVideoComments = asyncHandlers(async (req, res) => {
           {
             $lookup: {
               from: "users",
-              localField: "video",
+              localField: "owner",
               foreignField: "_id",
               as: "ownerDetails",
               pipeline: [
@@ -81,7 +81,7 @@ const getVideoComments = asyncHandlers(async (req, res) => {
     },
   ]);
 
- const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 10 } = req.query;
 
   const options = {
     page: parseInt(page) || 1,
@@ -97,20 +97,80 @@ const getVideoComments = asyncHandlers(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, result, "Comments fetched successfully"));
-    
 });
 
-
 const addComment = asyncHandlers(async (req, res) => {
-  // TODO: add a comment to a video
+  const { content } = req.body;
+  const { videoId } = req.params;
+
+  if (content.trim() == "") {
+    throw new ApiResponse(400, "comment cannot be empty");
+  }
+
+  if (!(await Video.findById(videoId))) {
+    throw new ApiResponse(400, "video not found");
+  }
+
+  const comments = await Comment.create({
+    comment: content,
+    video: videoId,
+    owner: req.user?._id,
+  });
+
+  if (!comments) {
+    throw new ApiError(500, "Error while adding comment, Please try again");
+  }
+
+  return res
+    .status(201)
+    .json(new ApiResponse(201, comments, "comment added successfully."));
 });
 
 const updateComment = asyncHandlers(async (req, res) => {
-  // TODO: update a comment
+  const { commentId, videoId } = req.params;
+  const { newContent } = req.body;
+
+  if (!mongoose.isValidObjectId(commentId) || !commentId) {
+    throw new ApiError(400, "Invalid comment id");
+  }
+
+  if (!mongoose.isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid video id");
+  }
+
+  const comment = await Comment.findById(commentId);
+
+  if (!comment) {
+    throw new ApiError(400, "Commnet does not exit");
+  }
+
+  if (!(await Video.findById(videoId))) {
+    throw new ApiError(400, "video does not exit,sorry");
+  }
+
+  if (comment?.owner.toString() !== req.user?._id.toString()) {
+    throw new ApiError(403, "You are not authorized to update this comment");
+  }
+
+  const updateComment = await Comment.findByIdAndUpdate(
+    commentId,
+    {
+      comment: newContent,
+    },
+    { new: true }
+  );
+
+  if (!updateComment) {
+    throw new ApiError(500, "Error while updating comment, Please try again");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updateComment, "Comment updated successfully"));
 });
 
 const deleteComment = asyncHandlers(async (req, res) => {
-  // TODO: delete a comment
+  
 });
 
 export { getVideoComments, addComment, updateComment, deleteComment };

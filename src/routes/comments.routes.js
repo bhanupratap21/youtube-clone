@@ -1,11 +1,20 @@
 import { Router } from 'express';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
-import { getVideoComments } from '../controllers/comments.controller.js';
+import { getVideoComments, addComment, updateComment } from '../controllers/comments.controller.js';
+import { checkValidObjectId } from '../middlewares/validateObjectId.middleware.js';
 
 const router = Router();
 
 router.use(verifyJWT);
 
-router.route('/:videoId').get(getVideoComments);
+router.route("/:videoId")
+    .get(checkValidObjectId(['videoId']), getVideoComments)
+    .post(checkValidObjectId(['videoId']), addComment);
+
+router
+  .route("/:videoId/:commentId")
+  //   .delete(checkValidObjectId(["commentId"]), deleteComment)
+  .patch(checkValidObjectId(["videoId","commentId"]), updateComment);
+                        
 
 export default router;
