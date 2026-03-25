@@ -15,4 +15,4 @@ owner:{
 
 tweetSchema.plugin(mongodbAggregatePaginate);
 
-export const Tweet = new mongoose("Tweet", tweetSchema);
+export const Tweet = mongoose.model("Tweet", tweetSchema);

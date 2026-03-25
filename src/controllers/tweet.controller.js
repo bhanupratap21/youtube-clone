@@ -1,6 +1,5 @@
 import mongoose, { isValidObjectId } from "mongoose";
 import { Tweet } from "../models/tweet.model.js";
-import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandlers } from "../utils/asyncHandlers.js";
@@ -18,16 +17,82 @@ const createTweet = asyncHandlers(async (req, res) => {
     content: content.trim(),
   });
 
-  if(!newTweet){
-    throw new ApiError(500,"couldn't create tweet.")
+  if (!newTweet) {
+    throw new ApiError(500, "couldn't create tweet.");
   }
 
-  const populatedDoc = await newTweet.populate("owner","avatar username fullName")
+  const populatedDoc = await newTweet.populate(
+    "owner",
+    "avatar username fullName"
+  );
 
- return res
-   .status(201)
-   .json(new ApiResponse(201, populatedDoc, "Successfully created new tweet."));
-
+  return res
+    .status(201)
+    .json(
+      new ApiResponse(201, populatedDoc, "Successfully created new tweet.")
+    );
 });
 
-export { createTweet };
+const getUserTweet = asyncHandlers(async (req, res) => {
+  const { userId } = req.params;
+  const { limit = 10, page = 1 } = req.query;
+
+  const fetchUserTweets = Tweet.aggregate([
+    {
+      $match: {
+        owner: new mongoose.Types.ObjectId(userId),
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [
+          {
+            $project: {
+              avatar: 1,
+              username: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        owner: { $first: "$owner" },
+      },
+    },
+    {
+      $sort: {
+        createdAt: -1,
+      },
+    },
+  ]);
+
+  const options = {
+    limit: parseInt(limit),
+    page: parseInt(page),
+  };
+
+  const paginatedUsertweets = await Tweet.aggregatePaginate(
+    fetchUserTweets,
+    options
+  );
+
+  if (!paginatedUsertweets) {
+    throw new ApiError(500, "Couldn't fetch tweets.Try again.");
+  }
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        paginatedUsertweets,
+        "Successfully fetched user Tweets"
+      )
+    );
+});
+
+export { createTweet, getUserTweet };
