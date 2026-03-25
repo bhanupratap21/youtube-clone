@@ -95,4 +95,59 @@ const getUserTweet = asyncHandlers(async (req, res) => {
     );
 });
 
-export { createTweet, getUserTweet };
+const deleteTweet = asyncHandlers(async (req, res) => {
+  const { tweetId } = req.params;
+  const userId = req.user?._id;
+  const deletedTweet = await Tweet.findOneAndDelete({
+    _id: new mongoose.Types.ObjectId(tweetId),
+    owner: new mongoose.Types.ObjectId(userId),
+  });
+
+  if (!deletedTweet) {
+    throw new ApiError(
+      404,
+      "Tweet not found or you're not authorized to delete it."
+    );
+  }
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Successfully deleted."));
+});
+
+const updateTweet = asyncHandlers(async (req, res) => {
+  const { tweetId } = req.params;
+  const { content } = req.body;
+  const userId = req.user?._id;
+
+  if (!content || content.trim() === "") {
+    throw new ApiError(400, "Content is required.");
+  }
+
+  const editTweet = await Tweet.findOneAndUpdate(
+    {
+      _id: new mongoose.Types.ObjectId(tweetId),
+      owner: new mongoose.Types.ObjectId(userId),
+    },
+    {
+      $set: {
+        content: content.trim(),
+      },
+    },
+    {
+      new: true,
+    }
+  );
+
+  if (!editTweet) {
+    throw new ApiError(
+      404,
+      "Tweet not found or You're not the authorized to edit it."
+    );
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, editTweet, "Successfully updated tweet."));
+});
+
+export { createTweet, getUserTweet, deleteTweet, updateTweet };
