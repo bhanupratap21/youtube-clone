@@ -5,26 +5,109 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandlers } from "../utils/asyncHandlers.js";
 
 const createPlaylist = asyncHandlers(async (req, res) => {
-    const { name, description } = req.body;
+  const { name, description } = req.body;
 
-    if(!name){
-        throw new ApiError(400,"Name is required")
-    }
+  if (!name) {
+    throw new ApiError(400, "Name is required");
+  }
 
-    const playlist = await Playlist.create({
-      name,
-      description: description || "",
-      owner: req.user._id,
-    });
+  const playlist = await Playlist.create({
+    name,
+    description: description || "",
+    owner: req.user._id,
+  });
 
-    if (!playlist) {
-      throw new ApiError(400, "Playlist Creation Failed");
-    }
+  if (!playlist) {
+    throw new ApiError(400, "Playlist Creation Failed");
+  }
 
-    return res
-      .status(200)
-      .json(new ApiResponse(200, playlist, "Playlist Created Successfully"));
-
+  return res
+    .status(200)
+    .json(new ApiResponse(200, playlist, "Playlist Created Successfully"));
 });
 
-export { createPlaylist };
+const getUserPlaylists = asyncHandlers(async (req, res) => {
+  const { userId } = req.params;
+
+  const playlists = await Playlist.aggregate([
+    {
+      $match: {
+        owner: new mongoose.Types.ObjectId(userId),
+      },
+    },
+    {
+      $project: {
+        name: 1,
+        description: 1,
+        createdAt: 1,
+        totalVideos: {
+          $size: {
+            $ifNull: ["$videos", []],
+          },
+        },
+      },
+    },
+    {
+      $sort: {
+        createdAt: -1,
+      },
+    },
+  ]);
+  return res
+    .status(200)
+    .json(new ApiResponse(200, playlists, "Playlist fetch successfully."));
+});
+
+const getPlaylistById = asyncHandlers(async (req, res) => {
+  const { playlistId } = req.params;
+
+  const playlist = await Playlist.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(playlistId),
+      },
+    },
+
+    {
+      $lookup: {
+        from: "videos",
+        localField: "videos",
+        foreignField: "_id",
+        as: "videos",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "ownerDetails",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $addFields: {
+              ownerDetails: { $first: "$ownerDetails" },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  if (playlist.length === 0) {
+    throw new ApiError(404, "Playlist doesn't exist.");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, playlist[0], "Fetched Playslist Succesfully."));
+});
+
+export { createPlaylist, getUserPlaylists, getPlaylistById };
