@@ -1,6 +1,6 @@
 import mongoose, { isValidObjectId } from "mongoose";
 import { Playlist } from "../models/playlist.model.js";
-import { Video } from "../models/video.model.js"
+import { Video } from "../models/video.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandlers } from "../utils/asyncHandlers.js";
@@ -148,9 +148,51 @@ const addVideoToPlaylist = asyncHandlers(async (req, res) => {
     );
 });
 
+const updatePlaylist = asyncHandlers(async (req, res) => {
+  const { playlistId } = req.params;
+  const { name, description } = req.body;
+
+  if (!name || name.trim() === "") {
+    throw new ApiError(400, "Name is required");
+  }
+
+  const updateDetails = {
+    name: name.trim(),
+  };
+
+  //so that if no description is recieved, previous description isn't overwritten
+  if (description !== undefined) {
+    updateDetails.description = description.trim();
+  }
+
+  const updatedPlaylist = await Playlist.findOneAndUpdate(
+    {
+      _id: playlistId,
+      owner: req.user?._id,
+    },
+    {
+      $set: updateDetails,
+    },
+    {
+      new: true,
+    }
+  );
+
+  if (!updatedPlaylist) {
+    throw new ApiError(404, "Couldn't find Playlist or unauthorized req");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, updatedPlaylist, "Successfully updated Playlist")
+    );
+});
+
 export {
   createPlaylist,
   getUserPlaylists,
   getPlaylistById,
   addVideoToPlaylist,
+  updatePlaylist,
 };
