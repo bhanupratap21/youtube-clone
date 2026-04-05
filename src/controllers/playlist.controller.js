@@ -189,10 +189,44 @@ const updatePlaylist = asyncHandlers(async (req, res) => {
     );
 });
 
+const removeVideoFromPlaylist = asyncHandlers(async (req, res) => {
+  const { playlistId, videoId } = req.params;
+
+  const updatePlaylist = await Playlist.findOneAndUpdate(
+    {
+      _id: playlistId,
+      owner: req.user?._id,
+    },
+    {
+      $pull: {
+        videos: videoId,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+
+  if (!updatePlaylist) {
+    throw new ApiError(404, "Couldn't find playlist or unathorized request");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        updatePlaylist,
+        "Successfully deleted video from the Playlist."
+      )
+    );
+});
+
 export {
   createPlaylist,
   getUserPlaylists,
   getPlaylistById,
   addVideoToPlaylist,
   updatePlaylist,
+  removeVideoFromPlaylist,
 };
